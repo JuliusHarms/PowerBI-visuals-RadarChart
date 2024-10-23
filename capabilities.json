@@ -195,6 +195,23 @@
                     }
                 }
             }
+        },
+        "axis": {
+            "displayName": "Axis Settings",
+            "properties": {
+                "MinValue": {
+                    "displayName": "Minimum Value",
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "MaxValue": {
+                    "displayName": "Maximum Value",
+                    "type": {
+                        "numeric": true
+                    }
+                }
+            }
         }
     },
     "supportsHighlight": true,
