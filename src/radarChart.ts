@@ -546,6 +546,8 @@ export class RadarChart implements IVisual {
         let categories: PrimitiveValue[] = [];
         const series: RadarChartSeries[] = this.radarChartData.series;
 
+        // Add MinMax based on options here...
+
         if (dataView.categorical
             && dataView.categorical.categories
             && dataView.categorical.categories[0]
@@ -601,7 +603,7 @@ export class RadarChart implements IVisual {
             width: this.viewport.width / RadarChart.ViewportFactor,
             height: this.viewport.height / RadarChart.ViewportFactor
         };
-
+        // Dev: irgendow hier sollte ich auch die beschreibung anbringen...
         this.angle = RadarChart.Radians / categories.length;
         this.radius = RadarChart.SegmentFactor * RadarChart.Scale * Math.min(width, height) / 2;
 
@@ -621,7 +623,7 @@ export class RadarChart implements IVisual {
 
         this.events.renderingFinished(options);
     }
-
+    // what does this do?
     public getMinValue(dataView: DataView) : number {
         let minValue = d3Min(<number[]>dataView.categorical.values[0].values);
         for (let i: number = 0; i < dataView.categorical.values.length; i++) {
@@ -1522,6 +1524,11 @@ export class RadarChart implements IVisual {
         });
 
         let minValue: number = this.formattingSettings.display.minValue.value;
+        
+        let minAxisValue = this.formattingSettings.display.axisMinValue.value;
+        let maxAxisValue = this.formattingSettings.display.axisMaxValue.value;
+        minValue = minValue <= minAxisValue ? minValue : minAxisValue;
+        maxValue = maxValue >= maxAxisValue ? maxValue : maxAxisValue;
 
         if (this.isPercentChart(dataPointsList)) {
             minValue = minValue >= RadarChart.MinDomainValue

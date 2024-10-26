@@ -146,6 +146,16 @@
                     "type": {
                         "enumeration": []
                     }
+                },
+                "axisMinValue": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "axisMaxValue": {
+                    "type": {
+                        "numeric": true
+                    }
                 }
             }
         },
@@ -192,23 +202,6 @@
                 "fontUnderline": {
                     "type": {
                         "bool": true
-                    }
-                }
-            }
-        },
-        "axis": {
-            "displayName": "Axis Settings",
-            "properties": {
-                "MinValue": {
-                    "displayName": "Minimum Value",
-                    "type": {
-                        "numeric": true
-                    }
-                },
-                "MaxValue": {
-                    "displayName": "Maximum Value",
-                    "type": {
-                        "numeric": true
                     }
                 }
             }

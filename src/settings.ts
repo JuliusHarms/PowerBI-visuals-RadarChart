@@ -340,6 +340,20 @@ export class DisplaySettingsCard extends FormattingSettingsSimpleCard {
         value: 0
     });
 
+    axisMinValue = new formattingSettings.NumUpDown({
+        name: "axisMinValue",
+        displayNameKey: "Visual_AxisMinValue",
+        displayName: "Axis minimum value",
+        value: 0
+    });
+    
+    axisMaxValue = new formattingSettings.NumUpDown({
+        name: "axisMaxValue",
+        displayNameKey: "Visual_AxisMaxValue",
+        displayName: "Axis maximum value",
+        value: 0
+    });
+
     axisBeginning = new formattingSettings.ItemDropdown({
         name: "axisBeginning",
         displayNameKey: "Visual_AxisStartPosition",
@@ -351,7 +365,7 @@ export class DisplaySettingsCard extends FormattingSettingsSimpleCard {
     name: string = RadarChartObjectNames.DisplaySettings;
     displayName: string = "Display settings";
     displayNameKey: string = "Visual_DisplaySettings";
-    slices: FormattingSettingsSlice[] = [this.minValue, this.axisBeginning];
+    slices: FormattingSettingsSlice[] = [this.minValue, this.axisBeginning, this.axisMaxValue, this.axisMinValue];
 }
 
 export class LabelsSettingsCard extends BaseFontCardSettings {
