@@ -362,10 +362,17 @@ export class DisplaySettingsCard extends FormattingSettingsSimpleCard {
         value: axisBeginningOptions[0],
     });
 
+    axisShowDataLabels = new formattingSettings.ToggleSwitch({
+        name: "Show",
+        displayName: "Show",
+        displayNameKey: "Show_axis_labels",
+        value: true
+    });
+
     name: string = RadarChartObjectNames.DisplaySettings;
     displayName: string = "Display settings";
     displayNameKey: string = "Visual_DisplaySettings";
-    slices: FormattingSettingsSlice[] = [this.minValue, this.axisBeginning, this.axisMaxValue, this.axisMinValue];
+    slices: FormattingSettingsSlice[] = [this.minValue, this.axisBeginning, this.axisMaxValue, this.axisMinValue, this.axisShowDataLabels];
 }
 
 export class LabelsSettingsCard extends BaseFontCardSettings {
