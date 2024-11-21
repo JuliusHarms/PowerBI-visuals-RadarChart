@@ -111,6 +111,11 @@ export interface RadarChartCircularSegment {
     y2: number;
 }
 
+export interface RadarChartPolygon {
+    points: string;
+    level: number;
+}
+
 export interface IFontReference extends GroupFormattingModelReference {
     fontFamily?: FormattingId;
     bold?: FormattingId;
@@ -137,6 +142,8 @@ export interface IDataPointReference extends GroupFormattingModelReference {
 
 export interface IDisplayReference extends GroupFormattingModelReference {
     axisBeginning?: FormattingId;
+    chartDrawingMode?: FormattingId;
+    fill?: FormattingId;
 }
 
 export interface ILineReference extends GroupFormattingModelReference {

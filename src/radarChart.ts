@@ -22,6 +22,9 @@
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
+ *  
+ *  ------------------------------------------------------------------------------
+ *  Modifications by Julius Harms, 2024.
  */
 import "./../style/radarChart.less";
 
@@ -125,15 +128,17 @@ import LegendPosition = ChartUtils.legendInterfaces.LegendPosition;
 import OutsidePlacement = ChartUtils.dataLabelInterfaces.OutsidePlacement;
 import OpacityLegendBehavior = ChartUtils.OpacityLegendBehavior;
 import { RadarChartWebBehavior, RadarChartBehaviorOptions } from "./radarChartWebBehavior";
-import { RadarChartSeries, RadarChartCircularSegment, RadarChartLabel, RadarChartDatapoint, IRadarChartData, RadarChartLabelsData } from "./radarChartDataInterfaces";
-import { LabelsSettingsCard, RadarChartObjectNames, RadarChartSettingsModel, TitleEdit, dataPointReferences, displayReferences, labelsReferences, legendReferences, linesReferences } from "./settings";
+import { RadarChartSeries, RadarChartCircularSegment, RadarChartPolygon, RadarChartLabel, RadarChartDatapoint, IRadarChartData, RadarChartLabelsData } from "./radarChartDataInterfaces";
+import { LabelsSettingsCard, RadarChartObjectNames, RadarChartSettingsModel, TitleEdit, dataPointReferences, displayReferences, labelsReferences, legendReferences, linesReferences, axislabelsReferences } from "./settings";
 import * as RadarChartUtils from "./radarChartUtils";
 import * as TooltipBuilder from "./tooltipBuilder";
+import { extractFilterColumnTarget } from "powerbi-visuals-utils-interactivityutils/lib/interactivityFilterService";
 
 export class RadarChart implements IVisual {
     private static VisualClassName: string = "radarChart";
     private static SegmentsSelector: ClassAndSelector = CreateClassAndSelector("segments");
     private static SegmentNodeSElector: ClassAndSelector = CreateClassAndSelector("segmentNode");
+    private static PolygonNodeSelector: ClassAndSelector = CreateClassAndSelector("segmentNode");
     private static AxisSelector: ClassAndSelector = CreateClassAndSelector("axis");
     private static AxisNodeSelector: ClassAndSelector = CreateClassAndSelector("axisNode");
     private static AxisLabelSelector: ClassAndSelector = CreateClassAndSelector("axisLabel");
@@ -327,6 +332,8 @@ export class RadarChart implements IVisual {
                 series: []
             };
         }
+
+
         const catDv: DataViewCategorical = dataView.categorical,
             values: DataViewValueColumns = catDv.values,
             series: RadarChartSeries[] = [];
@@ -546,8 +553,6 @@ export class RadarChart implements IVisual {
         let categories: PrimitiveValue[] = [];
         const series: RadarChartSeries[] = this.radarChartData.series;
 
-        // Add MinMax based on options here...
-
         if (dataView.categorical
             && dataView.categorical.categories
             && dataView.categorical.categories[0]
@@ -603,11 +608,19 @@ export class RadarChart implements IVisual {
             width: this.viewport.width / RadarChart.ViewportFactor,
             height: this.viewport.height / RadarChart.ViewportFactor
         };
-        // Dev: irgendow hier sollte ich auch die beschreibung anbringen...
         this.angle = RadarChart.Radians / categories.length;
         this.radius = RadarChart.SegmentFactor * RadarChart.Scale * Math.min(width, height) / 2;
 
-        this.drawCircularSegments(categories);
+        this.clearSegments();
+
+        if(this.formattingSettings.display.chartDrawingMode.value.value === "Lines"){
+            this.clearPolygons();
+            this.drawCircularSegmentsLines(categories);
+        }
+        else{
+            this.clearLines(); 
+            this.drawCircularSegmentsPolygons(categories);
+        }
         this.drawAxes(categories);
 
         this.createAxesLabels();
@@ -623,7 +636,7 @@ export class RadarChart implements IVisual {
 
         this.events.renderingFinished(options);
     }
-    // what does this do?
+
     public getMinValue(dataView: DataView) : number {
         let minValue = d3Min(<number[]>dataView.categorical.values[0].values);
         for (let i: number = 0; i < dataView.categorical.values.length; i++) {
@@ -718,6 +731,8 @@ export class RadarChart implements IVisual {
                     return this.getLabelsStyles();
                 case RadarChartObjectNames.DataPoint:
                     return this.getDataPointStyles(subSelections);
+                case RadarChartObjectNames.DisplaySettings:
+                    return this.getDisplayStyles(subSelections);
             }
         }
     }
@@ -733,6 +748,8 @@ export class RadarChart implements IVisual {
                     return this.getLabelsShortcuts();
                 case RadarChartObjectNames.DataPoint:
                     return this.getDataPointShortcuts(subSelections);
+                case RadarChartObjectNames.AxisLabels:
+                    return this.getAxisLabelsShortcuts();
             }
         }
     }
@@ -866,12 +883,48 @@ export class RadarChart implements IVisual {
                 enabledLabel: this.localizationManager.getDisplayName("Visual_OnObject_AddLabels")
             },
             {
+                type: VisualShortcutType.Toggle,
+                ...axislabelsReferences.show,
+                disabledLabel: this.localizationManager.getDisplayName("Visual_OnObject_DeleteLabels"),
+                enabledLabel: this.localizationManager.getDisplayName("Visual_OnObject_AddLabels")
+            },
+            {
                 type: VisualShortcutType.Divider,
             },
             {
                 type: VisualShortcutType.Navigate,
                 destinationInfo: { cardUid: labelsReferences.cardUid },
                 label: this.localizationManager.getDisplayName("Visual_OnObject_FormatLabels")
+            }
+        ];
+    }
+
+    private getAxisLabelsShortcuts(): VisualSubSelectionShortcuts {
+        return [
+            {
+                type: VisualShortcutType.Reset,
+                relatedResetFormattingIds: [
+                    axislabelsReferences.bold,
+                    axislabelsReferences.fontFamily,
+                    axislabelsReferences.fontSize,
+                    axislabelsReferences.italic,
+                    axislabelsReferences.underline,
+                    axislabelsReferences.color
+                ]
+            },
+            {
+                type: VisualShortcutType.Toggle,
+                ...axislabelsReferences.show,
+                disabledLabel: this.localizationManager.getDisplayName("Visual_OnObject_DeleteAxisLabels"),
+                enabledLabel: this.localizationManager.getDisplayName("Visual_OnObject_AddAxisLabels")
+            },
+            {
+                type: VisualShortcutType.Divider,
+            },
+            {
+                type: VisualShortcutType.Navigate,
+                destinationInfo: { cardUid: axislabelsReferences.cardUid },
+                label: this.localizationManager.getDisplayName("Visual_OnObject_FormatAxisLabels")
             }
         ];
     }
@@ -927,6 +980,7 @@ export class RadarChart implements IVisual {
                     selector
                 },
                 displayReferences.axisBeginning,
+                displayReferences.chartDrawingMode,
                 linesReferences.show],
             },
             {
@@ -939,6 +993,11 @@ export class RadarChart implements IVisual {
                 type: VisualShortcutType.Picker,
                 ...displayReferences.axisBeginning,
                 label: this.localizationManager.getDisplayName("Visual_AxisStartPosition")
+            },
+            {
+                type: VisualShortcutType.Picker,
+                ...displayReferences.chartDrawingMode,
+                label: this.localizationManager.getDisplayName("Visual_ChartDrawingModes")
             },
             {
                 type: VisualShortcutType.Divider,
@@ -957,6 +1016,20 @@ export class RadarChart implements IVisual {
             fill: {
                 reference: {
                     ...dataPointReferences.fill,
+                    selector
+                },
+                label: this.localizationManager.getDisplayName("Visual_Fill")
+            },
+        };
+    }
+
+    private getDisplayStyles(subSelections: CustomVisualSubSelection[]): SubSelectionStyles {
+        const selector = subSelections[0].customVisualObjects[0].selectionId?.getSelector();
+        return {
+            type: SubSelectionStylesType.Shape,
+            fill: {
+                reference: {
+                    ...displayReferences.fill,
                     selector
                 },
                 label: this.localizationManager.getDisplayName("Visual_Fill")
@@ -990,12 +1063,38 @@ export class RadarChart implements IVisual {
             .selectAll(RadarChart.SegmentNodeSElector.selectorName)
             .remove();
 
+        this.mainGroupElement
+            .select(RadarChart.SegmentsSelector.selectorName)
+            .selectAll(RadarChart.PolygonNodeSelector.selectorName)
+            .remove();
+
         this.chart
             .selectAll("*")
             .remove();
 
         this.legend.reset();
         this.legend.drawLegend({ dataPoints: [] }, clone(this.viewport));
+    }
+
+    private clearSegments(): void {
+        this.mainGroupElement
+            .select(RadarChart.SegmentsSelector.selectorName)
+            .selectAll("*")
+            .remove();
+    }
+
+    private clearLines(): void {
+        this.mainGroupElement
+            .select(RadarChart.SegmentsSelector.selectorName)
+            .selectAll("lines")
+            .remove();
+    }
+
+    private clearPolygons(): void {
+        this.mainGroupElement
+            .select(RadarChart.SegmentsSelector.selectorName)
+            .selectAll("polygon")
+            .remove();
     }
 
     private changeAxesLineColorInHighMode(selectionArray: Selection<any>[]): void {
@@ -1007,8 +1106,8 @@ export class RadarChart implements IVisual {
             });
         }
     }
-
-    private drawCircularSegments(values: PrimitiveValue[]): void {
+    
+    private drawCircularSegmentsLines(values: PrimitiveValue[]): void {
         const axisBeginning: number = +this.formattingSettings.display.axisBeginning.value.value;
         const data: RadarChartCircularSegment[] = [],
             angle: number = this.angle,
@@ -1038,7 +1137,7 @@ export class RadarChart implements IVisual {
             .exit()
             .remove();
 
-        selection = selection
+            selection = selection
             .enter()
             .append("svg:line")
             .classed(RadarChart.SegmentNodeSElector.className, true)
@@ -1046,9 +1145,87 @@ export class RadarChart implements IVisual {
             .attr("x1", (segment: RadarChartCircularSegment) => segment.x1)
             .attr("y1", (segment: RadarChartCircularSegment) => segment.y1)
             .attr("x2", (segment: RadarChartCircularSegment) => segment.x2)
-            .attr("y2", (segment: RadarChartCircularSegment) => segment.y2);
-
+            .attr("y2", (segment: RadarChartCircularSegment) => segment.y2)
+            .style("stroke", () => {
+                const lineColor = this.formattingSettings.display.fill.value;
+        
+                // Use the specified color if available, otherwise fallback to a default color
+                return lineColor && lineColor.value ? lineColor.value : "rgba(255, 0, 0, 1)"; // Default to solid red
+            });
+    
         this.changeAxesLineColorInHighMode([selection]);
+
+    }
+
+    private drawCircularSegmentsPolygons(values: PrimitiveValue[]): void {
+        const axisBeginning: number = +this.formattingSettings.display.axisBeginning.value.value;
+        const data: RadarChartPolygon[] = [];
+        const angle: number = this.angle;
+        const factor: number = RadarChart.SegmentFactor;
+        const levels: number = RadarChart.SegmentLevels;
+        const radius: number = this.radius;
+    
+        // Generate data for polygons
+        for (let level: number = 0; level < levels; level++) {
+            const levelFactor: number = radius * factor * ((level + 1) / levels);
+    
+            const points = values.map((_, i) => {
+                const x = levelFactor * Math.sin(i * angle);
+                const y = axisBeginning * levelFactor * Math.cos(i * angle);
+                return `${x},${y}`;
+            });
+    
+            points.push(points[0]); // Close the polygon
+    
+            data.push({
+                points: points.join(" "),
+                level: level,
+            });
+        }
+    
+        // Reverse the data order for drawing outermost polygons first
+        const reversedData = data.reverse();
+    
+        let selection: Selection<RadarChartPolygon> = this.mainGroupElement
+            .select(RadarChart.SegmentsSelector.selectorName)
+            .selectAll(RadarChart.PolygonNodeSelector.selectorName)
+            .data(reversedData);
+    
+        // Remove old elements
+        selection.exit().remove();
+    
+        // Get colors from formatting settings
+        const fillColor = this.formattingSettings.display.fill.value;
+    
+        // Append polygons in reverse order (outermost first)
+        selection = selection
+            .enter()
+            .append("polygon")
+            .classed(RadarChart.PolygonNodeSelector.className, true)
+            .merge(selection)
+            .attr("points", (polygon: RadarChartPolygon) => polygon.points)
+            .style("fill", (polygon: RadarChartPolygon) => {
+                // Increasing opacity for outer polygons
+                const opacityLevel = 0.1 + (polygon.level * (0.1 / levels));
+    
+                if (fillColor && fillColor.value) {
+                    // Convert hex color to RGBA
+                    return `rgba(${parseInt(fillColor.value.slice(1, 3), 16)}, 
+                                 ${parseInt(fillColor.value.slice(3, 5), 16)}, 
+                                 ${parseInt(fillColor.value.slice(5, 7), 16)}, 
+                                 ${opacityLevel})`;
+                }
+    
+                // Default fallback color with increasing opacity
+                return `rgba(255, 255, 255, ${opacityLevel})`;
+            })
+            .style("stroke", () => {
+                if (fillColor && fillColor.value) {
+                    return fillColor.value;
+                }
+                return "rgba(0, 0, 0, 0.5)"; // Default stroke color
+            })
+            .style("stroke-width", "1px");
     }
 
     private drawAxes(values: PrimitiveValue[]): void {
@@ -1339,6 +1516,59 @@ export class RadarChart implements IVisual {
         this.changeAxesLineColorInHighMode([labelsShortLineLinkSelection, labelsLongLineLinkSelection]);
     }
 
+    private addAxisLabels(yDomain: d3LinearScale<number, number>): void {
+        const labelSettings = this.formattingSettings.axisLabels;
+        const maxTicks = labelSettings.tick_num.value;
+        const minValue = yDomain.domain()[0];
+        const maxValue = yDomain.domain()[1];
+        const range = maxValue - minValue;
+        const increment = range / maxTicks;
+        const yoffsetFactor = labelSettings.y_offset.value;
+        const xoffsetFactor =  RadarChart.DotRadius * labelSettings.x_offset.value;;
+        const angleOffset = labelSettings.angle_offset.value * (Math.PI / 180);
+
+        // Add label at the minimum value
+        const minRadius = yDomain(minValue);
+        this.chart
+            .append("text")
+            .attr("class", "axis-label")
+            .attr("x", (minRadius +  xoffsetFactor) * Math.sin(angleOffset))
+            .attr("y", -(minRadius + yoffsetFactor) * Math.cos(angleOffset))
+            .attr("dy", "0.35em")
+            .style("text-anchor", "middle")
+            .style("font-size", () => PixelConverter.fromPoint(labelSettings.font.fontSize.value))
+            .style("font-family", () => labelSettings.font.fontFamily.value)
+            .style("font-weight", () => labelSettings.font.bold.value ? "bold" : "normal")
+            .style("font-style", () => labelSettings.font.italic.value ? "italic" : "normal")
+            .style("text-decoration", () => labelSettings.font.underline.value ? "underline" : "none")
+            .style("fill", () => labelSettings.color.value.value)
+            .text(Math.round(minValue).toString())
+            .classed(HtmlSubSelectableClass, this.formatMode && this.formattingSettings.axisLabels.axisShowDataLabels.value);
+    
+        // Add labels for each tick based on the adjusted range
+        for (let i = 1; i <= maxTicks; i++) {
+            const value = minValue + i * increment;
+            const radius = yDomain(value);
+    
+            this.chart
+                .append("text")
+                .attr("class", "axis-label")
+                .attr("x", (radius + xoffsetFactor) * Math.sin(angleOffset)) 
+                .attr("y", -(radius + yoffsetFactor) * Math.cos(angleOffset))
+                .attr("dy", "0.35em")
+                .style("text-anchor", "middle")
+                .style("font-size", () => PixelConverter.fromPoint(labelSettings.font.fontSize.value))
+                .style("font-family", () => labelSettings.font.fontFamily.value)
+                .style("font-weight", () => labelSettings.font.bold.value ? "bold" : "normal")
+                .style("font-style", () => labelSettings.font.italic.value ? "italic" : "normal")
+                .style("text-decoration", () => labelSettings.font.underline.value ? "underline" : "none")
+                .style("fill", () => labelSettings.color.value.value)
+                .text(Math.round(value).toString())
+                .classed(HtmlSubSelectableClass, this.formatMode && this.formattingSettings.axisLabels.axisShowDataLabels.value);
+        }
+    }
+    
+
     // eslint-disable-next-line max-lines-per-function
     private drawChart(series: RadarChartSeries[], duration: number): void {
         const angle: number = this.angle;
@@ -1508,6 +1738,12 @@ export class RadarChart implements IVisual {
             };
 
             this.interactivityService.bind(behaviorOptions);
+            
+            this.chart.selectAll(".axis-label").remove();
+            if (this.formattingSettings.axisLabels.axisShowDataLabels.value) {
+                this.addAxisLabels(yDomain);
+            }
+
         }
     }
 
@@ -1651,7 +1887,8 @@ export class RadarChart implements IVisual {
         settings.dataPoint.fill.value.value = colorHelper.getHighContrastColor("foreground", settings.dataPoint.fill.value.value);
         settings.labels.color.value.value = colorHelper.getHighContrastColor("foreground", settings.labels.color.value.value);
         settings.legend.text.labelColor.value.value = colorHelper.getHighContrastColor("foreground", settings.legend.text.labelColor.value.value);
-
+        settings.axisLabels.color.value.value = colorHelper.getHighContrastColor("foreground", settings.axisLabels.color.value.value);
+        settings.display.fill.value.value = colorHelper.getHighContrastColor("foreground", settings.display.fill.value.value);
         return settings;
     }
 

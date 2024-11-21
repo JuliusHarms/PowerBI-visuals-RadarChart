@@ -22,6 +22,9 @@
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
+ * 
+ *  ------------------------------------------------------------------------------
+ *  Modifications by Julius Harms, 2024.
  */
 import {legendInterfaces} from "powerbi-visuals-utils-chartutils";
 import LegendPosition = legendInterfaces.LegendPosition;
@@ -43,6 +46,8 @@ import ILocalizationManager = powerbi.extensibility.ILocalizationManager;
 import SubSelectableDirectEdit = powerbi.visuals.SubSelectableDirectEdit;
 import SubSelectableDirectEditStyle = powerbi.visuals.SubSelectableDirectEditStyle;
 
+import IVisualHost = powerbi.extensibility.visual.IVisualHost;
+
 interface IEnumMemberWithDisplayNameKey extends IEnumMember{
     key: string;
 }
@@ -63,13 +68,19 @@ const axisBeginningOptions : IEnumMemberWithDisplayNameKey[] = [
     {value : 1, displayName : "South", key: "Visual_South"}
 ];
 
+const chartDrawingModeOptions : IEnumMemberWithDisplayNameKey[] = [
+    {value : "Lines", displayName : "Lines", key: "Visual_Lines"}, 
+    {value : "Polygons", displayName : "Polygons", key: "Visual_Polygons"}
+];
+
 export const enum RadarChartObjectNames {
     Legend = "legend",
     LegendTitle = "legendTitleGroup",
     DataPoint = "dataPoint",
     DisplaySettings = "displaySettings",
     Line = "line",
-    Labels = "labels"
+    Labels = "labels",
+    AxisLabels = "axisLabels"
 }
 
 export const TitleEdit: SubSelectableDirectEdit = {
@@ -145,6 +156,21 @@ export const labelsReferences: ILabelsReference = {
     }
 }
 
+export const axislabelsReferences: ILabelsReference = {
+    ...createBaseFontReference(RadarChartObjectNames.AxisLabels),
+    cardUid: "Visual-axislabels-card",
+    groupUid: "axislabels-group",
+    show: {
+        objectName: RadarChartObjectNames.AxisLabels,
+        propertyName: "Show"
+    },
+    color: {
+        objectName: RadarChartObjectNames.AxisLabels,
+        propertyName: "color"
+    }
+}
+
+
 export const dataPointReferences: IDataPointReference = {
     cardUid: "Visual-dataPoint-card",
     groupUid: "dataPoint-group",
@@ -160,6 +186,14 @@ export const displayReferences: IDisplayReference = {
     axisBeginning: {
         objectName: RadarChartObjectNames.DisplaySettings,
         propertyName: "axisBeginning"
+    },
+    chartDrawingMode: {
+        objectName: RadarChartObjectNames.DisplaySettings,
+        propertyName: "chartDrawingMode"
+    },
+    fill: {
+        objectName: RadarChartObjectNames.DisplaySettings,
+        propertyName: "fill"
     }
 }
 
@@ -283,6 +317,8 @@ export class LegendSettingsCard extends FormattingSettingsCompositeCard {
     groups: FormattingSettingsGroup[] = [this.title, this.text];
 }
 
+
+
 export class DataPointSettingsCard extends FormattingSettingsSimpleCard {
     fill = new formattingSettings.ColorPicker({
         name: "fill",
@@ -362,17 +398,82 @@ export class DisplaySettingsCard extends FormattingSettingsSimpleCard {
         value: axisBeginningOptions[0],
     });
 
+    chartDrawingMode = new formattingSettings.ItemDropdown({
+        name: "chartDrawingMode",
+        items: chartDrawingModeOptions,
+        value: chartDrawingModeOptions[0],
+        displayName: "Chart drawing modes",
+        displayNameKey: "Visual_ChartDrawingModes",
+        description:  "Choose whether to render the chart as lines or filled polygons."
+    });
+
+
+    fill = new formattingSettings.ColorPicker({
+        name: "fill",
+        displayName: "Color",
+        displayNameKey: "Visual_Color",
+        value: { value: "" }
+    });
+    
+    name: string = RadarChartObjectNames.DisplaySettings;
+    displayName: string = "Display settings";
+    displayNameKey: string = "Visual_DisplaySettings";
+    slices: FormattingSettingsSlice[] = [this.minValue, this.axisBeginning, this.axisMaxValue, this.axisMinValue, this.chartDrawingMode, this.fill ];
+}
+
+export class AxisLabelsSettingsCard extends BaseFontCardSettings {
     axisShowDataLabels = new formattingSettings.ToggleSwitch({
-        name: "Show",
+        name: "show",
         displayName: "Show",
         displayNameKey: "Show_axis_labels",
         value: true
     });
 
-    name: string = RadarChartObjectNames.DisplaySettings;
-    displayName: string = "Display settings";
-    displayNameKey: string = "Visual_DisplaySettings";
-    slices: FormattingSettingsSlice[] = [this.minValue, this.axisBeginning, this.axisMaxValue, this.axisMinValue, this.axisShowDataLabels];
+    topLevelSlice = this.axisShowDataLabels;
+
+    color = new formattingSettings.ColorPicker({
+        name: "color",
+        displayNameKey: "Visual_Color",
+        displayName: "Color",
+        description: "Select color for axis labels",
+        descriptionKey: "Visual_Description_Color",
+        value : {value: "#000"}
+    });
+
+    y_offset = new formattingSettings.NumUpDown({
+        name: "y_Offset",
+        displayNameKey: "Visual_y_Offset",
+        displayName: "y-axis offset",
+        value: 0
+    });
+
+    x_offset = new formattingSettings.NumUpDown({
+        name: "x_Offset",
+        displayNameKey: "Visual_x_Offset",
+        displayName: "x-axis offset",
+        value: 300
+    });
+
+    angle_offset = new formattingSettings.NumUpDown({
+        name: "angle_Offset",
+        displayNameKey: "Visual_angle_Offset",
+        displayName: "Angle-axis offset",
+        value: 0.5
+    });
+
+    tick_num = new formattingSettings.NumUpDown({
+        name: "tick_num",
+        displayNameKey: "Visual_ticks",
+        displayName: "Visual_Number_of_Ticks",
+        value: 5
+    });
+
+    name: string = RadarChartObjectNames.AxisLabels;
+    displayNameKey: string = "Visual_AxisLabels";
+    displayName: string = "Axis Labels";
+    description: string = "Display axis label options";
+    descriptionKey: string = "Visual_Description_AxisLabels";
+    slices: FormattingSettingsSlice[] = [this.color, this.font,this.x_offset,this.y_offset,this.angle_offset,this.tick_num];
 }
 
 export class LabelsSettingsCard extends BaseFontCardSettings {
@@ -408,18 +509,21 @@ export class RadarChartSettingsModel extends FormattingSettingsModel {
     line: LineSettingsCard = new LineSettingsCard();
     display: DisplaySettingsCard = new DisplaySettingsCard();
     labels: LabelsSettingsCard = new LabelsSettingsCard();
+    axisLabels: AxisLabelsSettingsCard = new AxisLabelsSettingsCard();
 
     cards: FormattingSettingsCard[] = [
         this.legend,
         this.dataPoint,
         this.line,
         this.display,
-        this.labels
+        this.labels,
+        this.axisLabels
     ]
 
     setLocalizedOptions(localizationManager: ILocalizationManager): void {
         this.setLocalizedDisplayName(positionOptions, localizationManager);
         this.setLocalizedDisplayName(axisBeginningOptions, localizationManager);
+        this.setLocalizedDisplayName(chartDrawingModeOptions, localizationManager)
     }   
 
     public setLocalizedDisplayName(options: IEnumMemberWithDisplayNameKey[], localizationManager: ILocalizationManager): void {
@@ -447,6 +551,7 @@ export class RadarChartSettingsModel extends FormattingSettingsModel {
         this.dataPoint.visible = isVisible;
         this.labels.color.visible = isVisible;
         this.legend.text.labelColor.visible = isVisible;
+        this.display.visible = isVisible;
     }
 
     public setMinMaxValuesForDisplay(minValue: number): void {

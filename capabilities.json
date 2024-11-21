@@ -156,6 +156,21 @@
                     "type": {
                         "numeric": true
                     }
+                },
+                "chartDrawingMode": {
+                    "type": {
+                        "enumeration": []
+                    }
+                },
+                "fill": {
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    },
+                    "displayName": "Color"
                 }
             }
         },
@@ -164,6 +179,73 @@
                 "show": {
                     "type": {
                         "bool": true
+                    }
+                },
+                "color": {
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "fontSize": {
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                },
+                "fontFamily": {
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontBold": {
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "fontItalic": {
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "fontUnderline": {
+                    "type": {
+                        "bool": true
+                    }
+                }
+            }
+        },
+        "axisLabels": {
+            "properties": {
+                "show": {
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "y_Offset": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "x_Offset": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "angle_Offset": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "tick_num": {
+                    "type": {
+                        "numeric": true
                     }
                 },
                 "color": {
