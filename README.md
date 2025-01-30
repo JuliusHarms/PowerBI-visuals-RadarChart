@@ -3,6 +3,9 @@
 
 > A simple radar chart supporting multiple measures plotted over a categorical axis. Also known as a web chart, spider chart, or star chart. Use to display performance metrics for quality improvement.
 
+# Modifications and new features in this repository
+This version of the Radar Chart visual enhances Microsoft's standard implementation by adding new customization options for axis labels and data display. These improvements aim to increase readability and accessibility.
+
 ![Radar chart screenshot](assets/screenshot.png)
 # Overview
 A radar chart is a graphical method of displaying multivariate data in the form of a two-dimensional chart of three or more quantitative variables represented on axes starting from the same point. The relative position and angle of the axes is typically uninformative.
@@ -46,6 +49,8 @@ You can select any data point for data filtering and also you can use multi sele
 ![Radar chart screenshot 6](assets/RadarDisplaySettings02.png)
 
 - Axis start position: set the starting axis position North or South. You can see the difference on the next picture:
+- Axis minimum and maximum.
+- Axis labels: Displays numeric value labels on the axis. 
 
 ![Radar chart screenshot 6](assets/RadarDisplaySettings03.png)
 

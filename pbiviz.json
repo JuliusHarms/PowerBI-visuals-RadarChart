@@ -1,8 +1,8 @@
 {
   "visual": {
-    "name": "Enhanced Radar Chart",
-    "displayName": "Enhanced Radar Chart",
-    "guid": "RadarChart158489424",
+    "name": "enhancedRadarChart",
+    "displayName": "Enhanced Radar Chart 1.0.0.0",
+    "guid": "enhancedRadarChart1234",
     "version": "1.0.0.0",
     "visualClassName": "RadarChart",
     "description": "This visual is an enhanced version of Microsoft's standard Radar Chart for Power BI, with additional customization options for axis labels and data display, developed to improve chart readability and accessibility.",
